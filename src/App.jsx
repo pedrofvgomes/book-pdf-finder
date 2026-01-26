@@ -65,11 +65,11 @@ function App() {
 	return (
 		<Stack
 			direction="column"
-			width="90vw"
-			height="90vh"
+			width="95vw"
+			height="95vh"
 			justifyContent="center"
 			alignItems="center"
-			spacing={2}
+			spacing={1}
 			position='relative'
 		>
 			<span
@@ -118,7 +118,7 @@ function App() {
 				)}
 			</Stack>
 
-			<Stack direction='row' overflow='auto' spacing={2} maxWidth='80vw' minHeight='50px' maxHeight='150px'>
+			<Stack direction='row' overflow='auto' spacing={1} maxWidth='80vw' minHeight='50px' maxHeight='150px'>
 				{results?.map((result, index) => (
 					<Box
 						key={index}
@@ -142,7 +142,7 @@ function App() {
 			{results[selectedResultIndex] && (
 				<Box
 					sx={{
-						width: '80%',
+						width: '95%',
 						flexGrow: 1,
 						border: '1px solid #555',
 						display: 'flex',
@@ -151,10 +151,6 @@ function App() {
 						position: 'relative',
 					}}
 				>
-					<Typography sx={{ color: 'white', p: 1, wordBreak: 'break-all' }}>
-						{results[selectedResultIndex]}
-					</Typography>
-
 					<iframe
 						src={results[selectedResultIndex]}
 						style={{
