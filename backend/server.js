@@ -11,6 +11,7 @@ app.use(cors({
     origin: ['https://pedrofvgomes.github.io', 'http://localhost:5173'],
 }));
 
+// PDF search endpoint
 app.get('/search', async (req, res) => {
     const query = req.query.q;
     if (!query) return res.status(400).json({ error: 'Missing query parameter' });
@@ -53,6 +54,26 @@ app.get('/search', async (req, res) => {
         res.status(500).json({ error: 'Error fetching search results' });
     }
 });
+
+
+// PDF proxy endpoint
+app.get('/proxy', async (req, res) => {
+    const { url } = req.query;
+    if (!url) return res.status(400).json({ error: 'Missing url parameter' });
+
+    try {
+        const response = await fetch(url);
+        if (!response.ok) return res.status(response.status).send('Error fetching PDF');
+
+        const buffer = await response.arrayBuffer();
+        res.setHeader('Content-Type', 'application/pdf');
+        res.send(Buffer.from(buffer));
+    } catch (err) {
+        console.error('Error fetching PDF:', err);
+        res.status(500).json({ error: 'Error fetching PDF' });
+    }
+});
+
 
 app.listen(PORT, () => {
     console.log(`Backend running at http://localhost:${PORT}`);

@@ -13,11 +13,13 @@
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
+    "@embedpdf/react-pdf-viewer": "^2.3.0",
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^7.3.7",
     "@mui/material": "^7.3.7",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "react-pdf": "^10.3.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

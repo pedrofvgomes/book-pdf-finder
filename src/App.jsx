@@ -2,6 +2,39 @@ import React, { useRef, useEffect, useState } from 'react'
 import './App.css'
 import { Box, Button, IconButton, OutlinedInput, Stack, Typography } from '@mui/material'
 import { Close, Search } from '@mui/icons-material'
+import { Document, Page, pdfjs } from 'react-pdf'
+import PDFViewer from '@embedpdf/react-pdf-viewer'
+
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url,
+).toString();
+
+const PdfPreview = ({ url }) => {
+	const [numPages, setNumPages] = useState(null);
+
+	const onDocumentLoadSuccess = ({ numPages }) => {
+		setNumPages(numPages);
+	};
+
+	return (
+		<Box sx={{ width: '100%', textAlign: 'center' }}>
+			<Document
+				file={url}
+				onLoadSuccess={onDocumentLoadSuccess}
+				loading="Loading PDF..."
+			>
+				{Array.from(new Array(numPages), (el, index) => (
+					<Page
+						key={`page_${index + 1}`}
+						pageNumber={index + 1}
+						width={window.innerWidth * 0.8} // responsive width
+					/>
+				))}
+			</Document>
+		</Box>
+	);
+}
 
 function App() {
 	const [search, setSearch] = useState('')
@@ -9,6 +42,8 @@ function App() {
 	const [inProgress, setInProgress] = useState(false)
 	const [results, setResults] = useState([])
 	const [selectedResultIndex, setSelectedResultIndex] = useState(0)
+	const [numPages, setNumPages] = useState(0)
+	const [pageNumber, setPageNumber] = useState(1)
 	const spanRef = useRef(null)
 
 	useEffect(() => {
@@ -113,13 +148,10 @@ function App() {
 
 			{results[selectedResultIndex] && (
 				<Box sx={{ width: '80%', flexGrow: 1, border: '1px solid #555' }}>
-					<iframe
-						src={results[selectedResultIndex]}
-						width="100%"
-						height="100%"
-						title="PDF Preview"
-						style={{ border: 'none' }}
-					/>
+					<Typography sx={{ color: 'white', p: 1 }}>
+						{results[selectedResultIndex]}
+					</Typography>
+					<PdfPreview url={`https://book-pdf-finder.onrender.com/proxy?url=${encodeURIComponent(results[selectedResultIndex])}`} />
 				</Box>
 			)}
 		</Stack >
