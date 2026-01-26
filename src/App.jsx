@@ -24,7 +24,7 @@ function App() {
 		setResults([]);
 
 		try {
-			const response = await fetch(`http://localhost:3001/search?q=${encodeURIComponent(search.trim())}`);
+			const response = await fetch(`https://book-pdf-finder.onrender.com/search?q=${encodeURIComponent(search.trim())}`);
 			const data = await response.json();
 			setResults(data.results || []);
 		} catch (err) {
