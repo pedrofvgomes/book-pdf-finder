@@ -8,7 +8,7 @@ const app = express();
 const PORT = 3001;
 
 app.use(cors({
-    origin: ['https://pedrofvgomes.github.io/book-pdf-finder/', 'http://localhost:5173'],
+    origin: ['https://pedrofvgomes.github.io', 'http://localhost:5173'],
 }));
 
 app.get('/search', async (req, res) => {
