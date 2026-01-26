@@ -5,37 +5,6 @@ import { Close, Search } from '@mui/icons-material'
 import { Document, Page, pdfjs } from 'react-pdf'
 import PDFViewer from '@embedpdf/react-pdf-viewer'
 
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.mjs',
-  import.meta.url,
-).toString();
-
-const PdfPreview = ({ url }) => {
-	const [numPages, setNumPages] = useState(null);
-
-	const onDocumentLoadSuccess = ({ numPages }) => {
-		setNumPages(numPages);
-	};
-
-	return (
-		<Box sx={{ width: '100%', textAlign: 'center' }}>
-			<Document
-				file={url}
-				onLoadSuccess={onDocumentLoadSuccess}
-				loading="Loading PDF..."
-			>
-				{Array.from(new Array(numPages), (el, index) => (
-					<Page
-						key={`page_${index + 1}`}
-						pageNumber={index + 1}
-						width={window.innerWidth * 0.8} // responsive width
-					/>
-				))}
-			</Document>
-		</Box>
-	);
-}
-
 function App() {
 	const [search, setSearch] = useState('')
 	const [inputWidth, setInputWidth] = useState(150)
@@ -66,6 +35,30 @@ function App() {
 			console.error(err);
 		} finally {
 			setInProgress(false);
+		}
+	};
+
+	const handleDownload = async () => {
+		const url = results[selectedResultIndex];
+		if (!url) return;
+
+		try {
+			// Fetch via your backend proxy to avoid CORS
+			const response = await fetch(`https://book-pdf-finder.onrender.com/proxy?url=${encodeURIComponent(url)}`);
+			const blob = await response.blob();
+
+			// Create a temporary link to trigger download
+			const link = document.createElement('a');
+			link.href = window.URL.createObjectURL(blob);
+
+			// Use original filename if possible
+			const filename = url.split('/').pop().split('?')[0] || 'book.pdf';
+			link.download = filename;
+			document.body.appendChild(link);
+			link.click();
+			link.remove();
+		} catch (err) {
+			console.error('Download failed:', err);
 		}
 	};
 
@@ -147,13 +140,47 @@ function App() {
 			</Stack>
 
 			{results[selectedResultIndex] && (
-				<Box sx={{ width: '80%', flexGrow: 1, border: '1px solid #555' }}>
-					<Typography sx={{ color: 'white', p: 1 }}>
+				<Box
+					sx={{
+						width: '80%',
+						flexGrow: 1,
+						border: '1px solid #555',
+						display: 'flex',
+						flexDirection: 'column',
+						alignItems: 'center',
+						position: 'relative',
+					}}
+				>
+					<Typography sx={{ color: 'white', p: 1, wordBreak: 'break-all' }}>
 						{results[selectedResultIndex]}
 					</Typography>
-					<PdfPreview url={`https://book-pdf-finder.onrender.com/proxy?url=${encodeURIComponent(results[selectedResultIndex])}`} />
+
+					<iframe
+						src={results[selectedResultIndex]}
+						style={{
+							width: '100%',
+							flexGrow: 1,
+							border: 'none',
+						}}
+						title="PDF Preview"
+					/>
+
+					<Button
+						onClick={handleDownload}
+						variant="contained"
+						sx={{
+							position: 'absolute',
+							bottom: 10,
+							bgcolor: '#242424',
+							color: 'white',
+							fontWeight: 'bold',
+						}}
+					>
+						Download
+					</Button>
 				</Box>
 			)}
+
 		</Stack >
 	)
 }
