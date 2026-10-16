@@ -6,52 +6,99 @@ import { URL } from 'url';
 
 const app = express();
 const PORT = 3001;
+const SEARCH_TIMEOUT_MS = 8000;
+const SEARCH_CACHE_TTL_MS = 10 * 60 * 1000;
+const searchCache = new Map();
 
 app.use(cors({
     origin: ['https://pedrofvgomes.github.io', 'http://localhost:5173'],
 }));
 
+const isPdfUrl = (rawUrl) => {
+    if (!rawUrl) return false;
+
+    try {
+        const parsedUrl = new URL(rawUrl);
+        return parsedUrl.pathname.toLowerCase().endsWith('.pdf');
+    } catch {
+        return false;
+    }
+};
+
+const extractPdfResultUrl = (href) => {
+    if (!href) return null;
+
+    try {
+        const duckDuckGoUrl = new URL(href, 'https://duckduckgo.com');
+        const redirectedUrl = duckDuckGoUrl.searchParams.get('uddg');
+        if (redirectedUrl && isPdfUrl(redirectedUrl)) return redirectedUrl;
+    } catch {
+        return null;
+    }
+
+    const absoluteUrl = href.startsWith('//') ? `https:${href}` : href;
+    return isPdfUrl(absoluteUrl) ? absoluteUrl : null;
+};
+
 // PDF search endpoint
 app.get('/search', async (req, res) => {
-    const query = req.query.q;
+    const query = req.query.q?.trim();
     if (!query) return res.status(400).json({ error: 'Missing query parameter' });
+
+    const normalizedQuery = query.toLowerCase();
+    const cachedResult = searchCache.get(normalizedQuery);
+    if (cachedResult && cachedResult.expiresAt > Date.now()) {
+        return res.json({ results: cachedResult.results, cached: true });
+    }
 
     const url = `https://duckduckgo.com/html/?q=${encodeURIComponent(query + ' filetype:pdf')}`;
     console.log('Fetching DuckDuckGo URL:', url);
+
+    const abortController = new AbortController();
+    const timeoutId = setTimeout(() => abortController.abort(), SEARCH_TIMEOUT_MS);
 
     try {
         const response = await fetch(url, {
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
             },
+            signal: abortController.signal,
         });
+
+        if (!response.ok) {
+            throw new Error(`DuckDuckGo response was ${response.status}`);
+        }
 
         const html = await response.text();
         const $ = cheerio.load(html);
-
-        const pdfLinks = [];
+        const pdfLinks = new Set();
 
         $('a.result__a').each((i, el) => {
             const href = $(el).attr('href');
-            if (href) {
-                // DuckDuckGo redirects PDF links with 'uddg' param
-                if (href.includes('/l/?uddg=')) {
-                    const urlObj = new URL('https://duckduckgo.com' + href);
-                    const realUrl = urlObj.searchParams.get('uddg');
-                    if (realUrl && realUrl.endsWith('.pdf')) {
-                        pdfLinks.push(realUrl);
-                    }
-                } else if (href.endsWith('.pdf')) {
-                    pdfLinks.push(href);
-                }
-            }
+            const resolvedPdfUrl = extractPdfResultUrl(href);
+            if (resolvedPdfUrl) pdfLinks.add(resolvedPdfUrl);
         });
 
-        console.log('Final PDF links:', pdfLinks);
-        res.json({ results: pdfLinks });
+        const results = [...pdfLinks];
+        searchCache.set(normalizedQuery, {
+            results,
+            expiresAt: Date.now() + SEARCH_CACHE_TTL_MS,
+        });
+
+        console.log('Final PDF links:', results);
+        res.json({ results });
     } catch (err) {
         console.error('Error fetching/parsing DuckDuckGo:', err);
-        res.status(500).json({ error: 'Error fetching search results' });
+        if (cachedResult) {
+            return res.json({ results: cachedResult.results, cached: true, stale: true });
+        }
+
+        res.status(200).json({
+            results: [],
+            error: 'Search is temporarily unavailable. Please try again.',
+        });
+    } finally {
+        clearTimeout(timeoutId);
     }
 });
 
